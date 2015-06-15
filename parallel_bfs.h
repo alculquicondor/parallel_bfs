@@ -1,35 +1,37 @@
 #ifndef DISTRIBUTED_BFS_PARALLEL_BFS_H_
 #define DISTRIBUTED_BFS_PARALLEL_BFS_H_
 
-#include <boost/mpi/communicator.hpp>
 #include <boost/mpi/collectives/scatter.hpp>
 #include <boost/serialization/vector.hpp>
 
+#include "boost_mpi_extra.h"
+
 namespace mpi = boost::mpi;
 
-using std::vector;
-
 class ParallelBFS {
+public:
+  typedef int NodeId;
+  typedef std::vector<NodeId> NodeList;
 private:
   const mpi::communicator &comm;
-  long firstVertex, numVertices;
-  vector<long> vertices;
-  vector<long> edges;
-  long *distance;
+  NodeId first_vertex;
+  NodeList vertices;
+  NodeList edges;
+  NodeList distance;
 public:
   ParallelBFS(const mpi::communicator &comm,
-              const vector<long> &vertices,
-              const vector<long> &edges);
+              const NodeList &vertices,
+              const NodeList &edges);
   ParallelBFS(const mpi::communicator &comm);
-  void calculate(int u);
-  long size() {
-    return vertices.size();
+  void calculate(NodeId u);
+  NodeId size() {
+    return (NodeId)vertices.size();
   }
-  long getDistance(long u) {
+  NodeId get_distance(long u) {
     return distance[u];
   }
-  long getFirstVertex() const {
-    return firstVertex;
+  NodeId get_first_vertex() const {
+    return first_vertex;
   }
 };
 

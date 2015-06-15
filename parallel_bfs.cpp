@@ -1,43 +1,49 @@
 #include "parallel_bfs.h"
 
 ParallelBFS::ParallelBFS(const mpi::communicator &comm,
-                         const vector<long> &vertices,
-                         const vector<long> &edges) :
+                         const NodeList &vertices,
+                         const NodeList &edges) :
     comm(comm) {
-  long partSize = vertices.size() / comm.size(),
-      leftVertices = vertices.size() % comm.size(), firstVertex = 0;
-  vector<long> firstVertices(comm.size());
-  vector<vector<long>> verticesParts(comm.size());
-  vector<vector<long>> edgesParts(comm.size());
+  NodeId part_size = (NodeId)vertices.size() / comm.size(),
+      left_vertices = (NodeId)vertices.size() % comm.size(),
+      first_vertex = 0, first_edge = 0;
+  NodeList part_vertices((size_t)comm.size());
+  NodeList first_vertices((size_t)comm.size());
+  NodeList part_edges((size_t)comm.size());
+  NodeList first_edges((size_t)comm.size());
+  NodeList all_description((size_t)comm.size() * 3);
   for (int i = 0; i < comm.size(); ++i) {
-    long thisPartSize = partSize;
-    if (leftVertices > 0) {
-      ++thisPartSize;
-      --leftVertices;
-    }
-    long lastEdgePart = firstVertex + thisPartSize == vertices.size() ?
-        edges.size() : vertices[firstVertex+thisPartSize];
-    firstVertices[i] = firstVertex;
-    verticesParts[i].assign(vertices.begin() + firstVertex,
-                            vertices.begin() + firstVertex + thisPartSize);
-    edgesParts[i].assign(edges.begin() + vertices[firstVertex],
-                         edges.begin() + lastEdgePart);
-    firstVertex += thisPartSize;
+    NodeId this_part_size = part_size + (i < left_vertices);
+    NodeId last_edge = first_vertex + this_part_size == vertices.size() ?
+                      (NodeId)edges.size() :
+                      vertices[first_vertex + this_part_size];
+    all_description[3 * i] = first_vertices[i] = first_vertex;
+    all_description[3 * i + 1] = part_vertices[i] = this_part_size;
+    all_description[3 * i + 2] = part_edges[i] = last_edge - first_edge;
+    first_edges[i] = first_edge;
+    first_edge = last_edge;
+    first_vertex += this_part_size;
   }
-  mpi::scatter(comm, firstVertices, this->firstVertex, 0);
-  mpi::scatter(comm, verticesParts, this->vertices, 0);
-  mpi::scatter(comm, edgesParts, this->edges, 0);
+  NodeList description(3);
+  mpi::scatter(comm, all_description.data(), description.data(), 3, 0);
+  this->first_vertex = description[0];
+  mpi::scatterv(comm, vertices, part_vertices, first_vertices,
+                this->vertices, description[1], 0);
+  mpi::scatterv(comm, edges, part_edges, first_edges,
+                this->edges, description[2], 0);
+  for (NodeId &v : this->vertices)
+    v -= this->vertices[0];
 }
 
 ParallelBFS::ParallelBFS(const mpi::communicator &comm) : comm(comm) {
-  mpi::scatter(comm, firstVertex, 0);
-  mpi::scatter(comm, vertices, 0);
-  mpi::scatter(comm, edges, 0);
-  numVertices = vertices.size();
-  for (long &x : vertices)
-    x -= vertices[0];
-  vertices.push_back(edges.size());
+  NodeList description(3);
+  mpi::scatter(comm, description.data(), 3, 0);
+  first_vertex = description[0];
+  mpi::scatterv(comm, vertices, description[1], 0);
+  mpi::scatterv(comm, edges, description[2], 0);
+  for (NodeId &v : vertices)
+    v -= vertices[0];
 }
 
-void ParallelBFS::calculate(int u) {
+void ParallelBFS::calculate(NodeId u) {
 }
