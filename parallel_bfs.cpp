@@ -78,5 +78,11 @@ void ParallelBFS::calculate(NodeId u) {
   std::vector<NodeList> recv_buf((size_t)comm.size());
   std::vector<std::vector<NodeList>> t_buf(
       (size_t)omp_get_thread_num(), std::vector<NodeList>((size_t)comm.size()));
+
+  while (mpi::all_reduce(comm, (NodeId)frontier.size(),
+                         std::plus<NodeId>()) > 0) {
+    // TODO
+    ++level;
+  }
 }
 
