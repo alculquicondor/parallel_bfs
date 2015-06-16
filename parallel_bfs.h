@@ -1,6 +1,8 @@
 #ifndef DISTRIBUTED_BFS_PARALLEL_BFS_H_
 #define DISTRIBUTED_BFS_PARALLEL_BFS_H_
 
+#include <limits>
+#include <omp.h>
 #include <boost/mpi/collectives/scatter.hpp>
 #include <boost/serialization/vector.hpp>
 
@@ -12,10 +14,14 @@ class ParallelBFS {
 public:
   typedef int NodeId;
   typedef std::vector<NodeId> NodeList;
+  static const NodeId infinity;
 private:
   const mpi::communicator &comm;
   NodeId first_vertex;
-  NodeId num_vertices;
+  NodeId vertex_count;
+  NodeId vertex_total_count;
+  NodeId _vertex_left_parts;
+  NodeId _vertex_left_part_size;
   NodeList vertices;
   NodeList edges;
   NodeList distance;
@@ -26,7 +32,7 @@ public:
   ParallelBFS(const mpi::communicator &comm);
   void calculate(NodeId u);
   NodeId size() {
-    return num_vertices;
+    return vertex_count;
   }
   NodeId get_distance(long u) {
     return distance[u];
@@ -36,6 +42,7 @@ public:
   }
 private:
   void prepare();
+  int find_owner(NodeId u);
 };
 
 #endif //DISTRIBUTED_BFS_PARALLEL_BFS_H_

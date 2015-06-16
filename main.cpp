@@ -1,8 +1,6 @@
 #include <cstdio>
 #include <vector>
 
-#include <omp.h>
-
 #include <boost/mpi/environment.hpp>
 
 #include "parallel_bfs.h"
