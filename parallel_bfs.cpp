@@ -31,8 +31,7 @@ ParallelBFS::ParallelBFS(const mpi::communicator &comm,
                 this->vertices, description[1], 0);
   mpi::scatterv(comm, edges, part_edges, first_edges,
                 this->edges, description[2], 0);
-  for (NodeId &v : this->vertices)
-    v -= this->vertices[0];
+  prepare();
 }
 
 ParallelBFS::ParallelBFS(const mpi::communicator &comm) : comm(comm) {
@@ -41,9 +40,16 @@ ParallelBFS::ParallelBFS(const mpi::communicator &comm) : comm(comm) {
   first_vertex = description[0];
   mpi::scatterv(comm, vertices, description[1], 0);
   mpi::scatterv(comm, edges, description[2], 0);
+  prepare();
+}
+
+void ParallelBFS::prepare() {
+  num_vertices = (NodeId)vertices.size();
   for (NodeId &v : vertices)
     v -= vertices[0];
+  vertices.push_back((NodeId)edges.size());
 }
 
 void ParallelBFS::calculate(NodeId u) {
 }
+

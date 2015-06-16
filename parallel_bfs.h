@@ -15,6 +15,7 @@ public:
 private:
   const mpi::communicator &comm;
   NodeId first_vertex;
+  NodeId num_vertices;
   NodeList vertices;
   NodeList edges;
   NodeList distance;
@@ -25,7 +26,7 @@ public:
   ParallelBFS(const mpi::communicator &comm);
   void calculate(NodeId u);
   NodeId size() {
-    return (NodeId)vertices.size();
+    return num_vertices;
   }
   NodeId get_distance(long u) {
     return distance[u];
@@ -33,6 +34,8 @@ public:
   NodeId get_first_vertex() const {
     return first_vertex;
   }
+private:
+  void prepare();
 };
 
 #endif //DISTRIBUTED_BFS_PARALLEL_BFS_H_
