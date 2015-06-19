@@ -75,13 +75,16 @@ void ParallelBFS::calculate(NodeId root) {
   distance.assign((size_t) vertex_count, infinity);
   NodeId level = 1;
   NodeList frontier;
+  frontier.reserve((size_t)vertex_count);
   if (comm.rank() == find_owner(root)) {
     frontier.push_back(root - first_vertex);
     distance[root - first_vertex] = 0;
   }
   std::vector<NodeList> send_buf((size_t)comm.size());
-  NodeList recv_buf((size_t)vertex_count+1);
-  NodeList &new_frontier = send_buf[comm.rank()];
+  NodeList new_frontier;
+
+  NodeList sizes((size_t)comm.size()),
+           displacements((size_t)comm.size());
 
   while (mpi::all_reduce(comm, (NodeId)frontier.size(),
                          std::plus<NodeId>()) > 0) {
@@ -90,18 +93,20 @@ void ParallelBFS::calculate(NodeId root) {
         int v = edges[e];
         send_buf[find_owner(v)].push_back(v);
       }
-    for (int i = 1; i < comm.size(); ++i) {
-      int dest = (comm.rank() + i) % comm.size();
-      NodeList &this_send_buf = send_buf[dest];
-      std::sort(this_send_buf.begin(), this_send_buf.end());
-      this_send_buf.resize(
-          std::unique(this_send_buf.begin(), this_send_buf.end())
-          - this_send_buf.begin());
-      mpi::status status = mpi::sendrecv(
-          comm, dest, 0, send_buf[dest], mpi::any_source, 0, recv_buf);
-      new_frontier.insert(new_frontier.end(), recv_buf.begin(),
-                          recv_buf.begin() + status.count<NodeId>().get());
+    for (int i = 0; i < comm.size(); ++i) {
+      mpi::gather(comm, (NodeId)send_buf[i].size(), sizes.data(), i);
+      if (i == comm.rank()) {
+        for (int j = 1; j < comm.size(); ++j)
+          displacements[j] = displacements[j - 1] + sizes[j - 1];
+        new_frontier.resize(
+            (size_t)(displacements[comm.size()-1] + sizes[comm.size() - 1]));
+        mpi::gatherv(comm, send_buf[i], new_frontier, sizes, displacements, i);
+      } else {
+        mpi::gatherv(comm, send_buf[i], i);
+      }
     }
+    for (size_t i = 0; i < comm.size(); ++i)
+      send_buf[i].clear();
     frontier.clear();
     for (int v : new_frontier) {
       v -= first_vertex;
@@ -110,8 +115,6 @@ void ParallelBFS::calculate(NodeId root) {
         frontier.push_back(v);
       }
     }
-    for (size_t i = 0; i < comm.size(); ++i)
-      send_buf[i].clear();
     ++level;
   }
 }

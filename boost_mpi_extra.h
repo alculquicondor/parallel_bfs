@@ -39,6 +39,24 @@ status sendrecv(const communicator &comm,
   return status(_status);
 }
 
+template<typename T>
+void gatherv(const communicator &comm, const std::vector<T> &in_values,
+             std::vector<T> &out_values, const std::vector<int> &recv_counts,
+             const std::vector<int> &displacements, int root) {
+  MPI_Datatype data_type = mpi::get_mpi_datatype(T());
+  MPI_Gatherv(in_values.data(), (int)in_values.size(), data_type,
+              out_values.data(), recv_counts.data(), displacements.data(),
+              data_type, root, comm);
+}
+
+template<typename T>
+void gatherv(const communicator &comm, const std::vector<T> &in_values,
+             int root) {
+  MPI_Datatype data_type = mpi::get_mpi_datatype(T());
+  MPI_Gatherv(in_values.data(), (int)in_values.size(), data_type,
+              nullptr, nullptr, nullptr, data_type, root, comm);
+}
+
 }
 }
 

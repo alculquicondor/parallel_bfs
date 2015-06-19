@@ -5,6 +5,7 @@
 #include <boost/mpi/collectives/scatter.hpp>
 #include <boost/mpi/collectives/all_reduce.hpp>
 #include <boost/serialization/vector.hpp>
+#include <boost/mpi/collectives/gather.hpp>
 
 #include "boost_mpi_extra.h"
 
