@@ -92,15 +92,14 @@ void ParallelBFS::calculate(NodeId root) {
       }
     new_frontier = send_buf[comm.rank()];
     for (int i = 1; i < comm.size(); ++i) {
-      int dest = (comm.rank() + i) % comm.size(),
-          source = (comm.rank() + comm.size() - i) % comm.size();
+      int dest = (comm.rank() + i) % comm.size();
       NodeList &this_send_buf = send_buf[dest];
       std::sort(this_send_buf.begin(), this_send_buf.end());
       this_send_buf.resize(
           std::unique(this_send_buf.begin(), this_send_buf.end())
           - this_send_buf.begin());
       mpi::status status = mpi::sendrecv(
-          comm, dest, dest, send_buf[dest], source, comm.rank(), recv_buf);
+          comm, dest, 0, send_buf[dest], mpi::any_source, 0, recv_buf);
       new_frontier.insert(new_frontier.end(), recv_buf.begin(),
                           recv_buf.begin() + status.count<NodeId>().get());
     }
