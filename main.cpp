@@ -23,5 +23,7 @@ int main(int argc, char *argv[1]) {
     bfs = new ParallelBFS(world);
   }
   bfs->calculate(0);
+  for (int i = 0; i < bfs->size(); ++i)
+    printf("%d: %d\n", bfs->get_first_vertex() + i, bfs->get_distance(i));
   return 0;
 }
