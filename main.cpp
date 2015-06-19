@@ -2,6 +2,8 @@
 #include <vector>
 
 #include <boost/mpi/environment.hpp>
+#include <boost/mpi/timer.hpp>
+#include <boost/mpi/collectives/reduce.hpp>
 
 #include "parallel_bfs.h"
 
@@ -22,8 +24,16 @@ int main(int argc, char *argv[1]) {
   } else {
     bfs = new ParallelBFS(world);
   }
+
+  mpi::timer timer;
   bfs->calculate(0);
+  double elapsed = timer.elapsed(), global_elapsed;
+  mpi::reduce(world, elapsed, global_elapsed, mpi::minimum<double>(), 0);
+  if (world.rank() == 0)
+    fprintf(stderr, "Running time: %lf s\n", global_elapsed);
+
   for (int i = 0; i < bfs->size(); ++i)
     printf("%d: %d\n", bfs->get_first_vertex() + i, bfs->get_distance(i));
+  delete bfs;
   return 0;
 }
