@@ -81,7 +81,7 @@ void ParallelBFS::calculate(NodeId root) {
   }
   std::vector<NodeList> send_buf((size_t)comm.size());
   NodeList recv_buf((size_t)vertex_count+1);
-  NodeList new_frontier;
+  NodeList &new_frontier = send_buf[comm.rank()];
 
   while (mpi::all_reduce(comm, (NodeId)frontier.size(),
                          std::plus<NodeId>()) > 0) {
@@ -90,7 +90,6 @@ void ParallelBFS::calculate(NodeId root) {
         int v = edges[e];
         send_buf[find_owner(v)].push_back(v);
       }
-    new_frontier = send_buf[comm.rank()];
     for (int i = 1; i < comm.size(); ++i) {
       int dest = (comm.rank() + i) % comm.size();
       NodeList &this_send_buf = send_buf[dest];
@@ -103,8 +102,6 @@ void ParallelBFS::calculate(NodeId root) {
       new_frontier.insert(new_frontier.end(), recv_buf.begin(),
                           recv_buf.begin() + status.count<NodeId>().get());
     }
-    for (size_t i = 0; i < comm.size(); ++i)
-      send_buf[i].clear();
     frontier.clear();
     for (int v : new_frontier) {
       v -= first_vertex;
@@ -113,6 +110,8 @@ void ParallelBFS::calculate(NodeId root) {
         frontier.push_back(v);
       }
     }
+    for (size_t i = 0; i < comm.size(); ++i)
+      send_buf[i].clear();
     ++level;
   }
 }
