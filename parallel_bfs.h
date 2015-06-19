@@ -34,7 +34,7 @@ public:
   NodeId size() {
     return vertex_count;
   }
-  NodeId get_distance(long u) {
+  NodeId get_distance(NodeId u) {
     return distance[u];
   }
   NodeId get_first_vertex() const {

@@ -80,13 +80,34 @@ void ParallelBFS::calculate(NodeId root) {
     distance[root - first_vertex] = 0;
   }
   std::vector<NodeList> send_buf((size_t)comm.size());
-  std::vector<NodeList> recv_buf((size_t)comm.size());
+  NodeList recv_buf((size_t)vertex_count+1);
+  NodeList new_frontier;
 
   while (mpi::all_reduce(comm, (NodeId)frontier.size(),
                          std::plus<NodeId>()) > 0) {
-    for (NodeId u : frontier) {
-      for (int v = vertices[u]; v < vertices[u+1]; ++v)
+    for (NodeId u : frontier)
+      for (int e = vertices[u]; e < vertices[u + 1]; ++e) {
+        int v = edges[e];
         send_buf[find_owner(v)].push_back(v);
+      }
+    new_frontier = send_buf[comm.rank()];
+    for (int i = 1; i < comm.size(); ++i) {
+      int dest = (comm.rank() + i) % comm.size(),
+          source = (comm.rank() + comm.size() - i) % comm.size();
+      mpi::status status = mpi::sendrecv(
+          comm, dest, 0, send_buf[dest], source, 0, recv_buf);
+      new_frontier.insert(new_frontier.end(), recv_buf.begin(),
+                          recv_buf.begin() + status.count<NodeId>().get());
+    }
+    for (size_t i = 0; i < comm.size(); ++i)
+      send_buf[i].clear();
+    frontier.clear();
+    for (int v : new_frontier) {
+      v -= first_vertex;
+      if (distance[v] == infinity) {
+        distance[v] = level;
+        frontier.push_back(v);
+      }
     }
     ++level;
   }
