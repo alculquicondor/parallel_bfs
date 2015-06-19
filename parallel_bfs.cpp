@@ -66,22 +66,23 @@ int ParallelBFS::find_owner(NodeId u) {
   return _vertex_left_parts + (u - total_left) / (_vertex_left_part_size - 1);
 }
 
-void ParallelBFS::calculate(NodeId u) {
+void ParallelBFS::calculate(NodeId root) {
   distance.assign((size_t) vertex_count, infinity);
   NodeId level = 1;
   NodeList frontier;
-  if (comm.rank() == find_owner(u)) {
-    frontier.push_back(u - first_vertex);
-    distance[u - first_vertex] = 0;
+  if (comm.rank() == find_owner(root)) {
+    frontier.push_back(root - first_vertex);
+    distance[root - first_vertex] = 0;
   }
   std::vector<NodeList> send_buf((size_t)comm.size());
   std::vector<NodeList> recv_buf((size_t)comm.size());
-  std::vector<std::vector<NodeList>> t_buf(
-      (size_t)omp_get_thread_num(), std::vector<NodeList>((size_t)comm.size()));
 
   while (mpi::all_reduce(comm, (NodeId)frontier.size(),
                          std::plus<NodeId>()) > 0) {
-    // TODO
+    for (NodeId u : frontier) {
+      for (int v = vertices[u]; v < vertices[u+1]; ++v)
+        send_buf[find_owner(v)].push_back(v);
+    }
     ++level;
   }
 }

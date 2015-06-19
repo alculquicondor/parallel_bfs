@@ -8,7 +8,6 @@
 int main(int argc, char *argv[1]) {
   mpi::environment env(argc, argv);
   mpi::communicator world;
-  omp_set_num_threads(argc > 1 ? atoi(argv[1]) : 2);
 
   ParallelBFS *bfs;
   if (world.rank() == 0) {

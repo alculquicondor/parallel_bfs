@@ -2,7 +2,6 @@
 #define DISTRIBUTED_BFS_PARALLEL_BFS_H_
 
 #include <limits>
-#include <omp.h>
 #include <boost/mpi/collectives/scatter.hpp>
 #include <boost/mpi/collectives/all_reduce.hpp>
 #include <boost/serialization/vector.hpp>
