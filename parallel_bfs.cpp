@@ -32,10 +32,12 @@ ParallelBFS::ParallelBFS(const mpi::communicator &comm,
   mpi::scatter(comm, all_description.data(), description.data(), 4, 0);
   this->vertex_total_count = description[0];
   this->first_vertex = description[1];
+  this->vertices.resize((size_t)description[2]);
   mpi::scatterv(comm, vertices, part_vertices, first_vertices,
-                this->vertices, description[2], 0);
+                this->vertices, 0);
+  this->edges.resize((size_t)description[3]);
   mpi::scatterv(comm, edges, part_edges, first_edges,
-                this->edges, description[3], 0);
+                this->edges, 0);
   prepare();
 }
 
@@ -44,15 +46,18 @@ ParallelBFS::ParallelBFS(const mpi::communicator &comm) : comm(comm) {
   mpi::scatter(comm, description.data(), 4, 0);
   vertex_total_count = description[0];
   first_vertex = description[1];
-  mpi::scatterv(comm, vertices, description[2], 0);
-  mpi::scatterv(comm, edges, description[3], 0);
+  vertices.resize((size_t)description[2]);
+  mpi::scatterv(comm, vertices, 0);
+  edges.resize((size_t)description[3]);
+  mpi::scatterv(comm, edges, 0);
   prepare();
 }
 
 void ParallelBFS::prepare() {
   vertex_count = (NodeId)vertices.size();
+  NodeId t = vertices[0];
   for (NodeId &v : vertices)
-    v -= vertices[0];
+    v -= t;
   vertices.push_back((NodeId)edges.size());
   _vertex_left_parts = vertex_total_count % comm.size();
   _vertex_left_part_size = comm.rank() < _vertex_left_parts ?
